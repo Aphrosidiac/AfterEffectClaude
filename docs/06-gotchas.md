@@ -81,6 +81,11 @@ Read this before debugging. Most "AE scripting is broken" moments are on this li
 - `aerender` with no `-comp`/`-rqindex` ignores `-output`, `-s`, `-e`, `-i`, and both templates.
 - `aerender -help` exits with a non-zero code. Don't treat exit code alone as success/failure —
   parse the log.
+- **Windows PowerShell 5.1 reads `.ps1` as ANSI unless the file has a UTF-8 BOM.** An em dash or
+  smart quote in a helper script becomes mojibake and produces bogus parse errors ("Unexpected
+  token 'is'"). Keep `.ps1` files ASCII-only, or write them UTF-8 **with** BOM. Hit while
+  building `run-jsx.ps1` / `ae-send.ps1`. Verify with:
+  `[System.Management.Automation.Language.Parser]::ParseFile($p,[ref]$t,[ref]$e); $e`
 
 ## Rendering
 
