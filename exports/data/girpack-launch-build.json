@@ -1,0 +1,12 @@
+{
+  "savedTo": "C:\\Dev\\AfterEffectClaude\\projects\\girpack-launch.aep",
+  "scenes": 7,
+  "fonts": ", , , ",
+  "assets": "Logomark-Icon/LEWIX-Icon-FullColor.png, Primary-Logo/LEWIX-Logo-FullColor-OnDarkBG.png",
+  "warnings": [
+    "Font family NOT INSTALLED: Figtree (After Effects will substitute)",
+    "Font family NOT INSTALLED: Figtree (After Effects will substitute)",
+    "Font family NOT INSTALLED: Urbanist (After Effects will substitute)",
+    "Font family NOT INSTALLED: Urbanist (After Effects will substitute)"
+  ]
+}

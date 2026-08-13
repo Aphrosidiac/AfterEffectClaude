@@ -48,9 +48,29 @@
 
     var C = CFG.col;
 
+    // Create the marker file .tmp/ap-silent to suppress modal dialogs (unattended runs).
+    // An env var does NOT work here: AfterFX.com hands the script to the already-running
+    // AE process, which has the environment it was launched with, not ours.
+    // The JSON report is written either way.
+    var SILENT = false;
+    try { SILENT = new File("C:/Dev/AfterEffectClaude/.tmp/ap-silent").exists; } catch (e) {}
+    function say(msg) {
+        if (!SILENT) { alert(msg); }
+        try { $.writeln(msg); } catch (e2) {}
+    }
+
     // =================================================================== guard
-    if (app.project.numItems > 0 || app.project.file !== null) {
-        alert("build.jsx needs an empty project.\n\n" +
+    // Re-running is safe when the open project is the one THIS script generated:
+    // it is fully reproducible, so it gets closed without saving and rebuilt.
+    // Any other project is left strictly alone.
+    var openFile = app.project.file ? app.project.file.fsName.replace(/\\/g, "/") : null;
+    var ownFile  = CFG.saveTo.replace(/\\/g, "/");
+    var isOwn    = openFile && (openFile.toLowerCase() === ownFile.toLowerCase());
+
+    if (isOwn) {
+        app.project.close(CloseOptions.DO_NOT_SAVE_CHANGES);
+    } else if (app.project.numItems > 0 || app.project.file !== null) {
+        say("build.jsx needs an empty project.\n\n" +
               "File > New > New Project (Ctrl+Alt+N), then run this again.\n" +
               "Nothing has been changed.");
         return;
@@ -146,12 +166,12 @@
             if (A.icon) {
                 iconLayer = c.layers.add(A.icon, c.duration);
                 iconLayer.name = "LEWIX ICON";
-                K.position(iconLayer).setValue([CFG.w / 2, 470]);
-                var s = K.scale(iconLayer).value;
-                K.scale(iconLayer).setValue([s[0] * 0.28, s[1] * 0.28]);
+                K.position(iconLayer).setValue([CFG.w / 2, 430]);
+                K.fitH(iconLayer, 300);   // source art is huge; scale from real pixel size
                 K.popIn(iconLayer, 0.6, 60, 1.2);
                 K.blurIn(iconLayer, 0.6, 30, 1.0);
-                K.glow(iconLayer, 60, 0.6);
+                // keep the glow low: anything stronger blooms the brand gradient to flat white
+                K.glow(iconLayer, 40, 0.25);
             }
 
             var pres = K.text(c, "LEWIX PRESENTS", {
@@ -264,10 +284,10 @@
             });
             K.riseIn(head, 0.2, 30, 0.8);
 
-            var panel = card(c, { w: 1120, h: 560, x: 760, y: 620, name: "costing panel" });
+            var panel = card(c, { w: 1120, h: 460, x: 760, y: 560, name: "costing panel" });
             K.popIn(panel, 0.6, 94, 0.7);
 
-            label(c, "COSTING", { x: 260, y: 400, name: "costing label" });
+            label(c, "COSTING", { x: 260, y: 390, name: "costing label" });
 
             // table rows: product / supplier / cost / calc price
             var rows = [
@@ -276,7 +296,7 @@
                 ["PE Bag 12x18",       "Supplier A", "RM  88.00", "RM 103.84"],
                 ["Shrink Film 450mm",  "Supplier B", "RM 176.00", "RM 207.68"]
             ];
-            var rowLayers = [], i, y0 = 470;
+            var rowLayers = [], i, y0 = 450;
             for (i = 0; i < rows.length; i++) {
                 var y = y0 + i * 84;
                 var strip = K.rect(c, {
@@ -284,13 +304,13 @@
                     x: 760, y: y, name: "row" + i
                 });
                 var nm = K.text(c, rows[i][0], { font: F.bodyMd, size: 28, color: C.white,
-                                                 x: 280, y: y + 9, justify: "left" });
+                                                 x: 268, y: y + 9, justify: "left" });
                 var sp = K.text(c, rows[i][1], { font: F.body, size: 24, color: C.muted,
-                                                 x: 760, y: y + 9, justify: "left" });
+                                                 x: 700, y: y + 9, justify: "left" });
                 var ct = K.text(c, rows[i][2], { font: F.body, size: 26, color: C.muted,
-                                                 x: 1000, y: y + 9, justify: "left" });
+                                                 x: 930, y: y + 9, justify: "left" });
                 var cp = K.text(c, rows[i][3], { font: F.bodyMd, size: 28, color: C.cyan,
-                                                 x: 1220, y: y + 9, justify: "left" });
+                                                 x: 1120, y: y + 9, justify: "left" });
                 rowLayers.push([strip, nm, sp, ct, cp]);
             }
             for (i = 0; i < rowLayers.length; i++) {
@@ -303,39 +323,46 @@
             // formula chip
             var chip = K.rect(c, { w: 380, h: 62, r: 31, fill: C.panel, stroke: C.blue,
                                    strokeW: 2, x: 1560, y: 300, name: "formula chip" });
-            var chipTxt = K.text(c, "cost x 1.18", { font: F.bodyMd, size: 30, color: C.blue,
+            var chipTxt = K.text(c, "cost x 1.18", { font: F.bodyMd, size: 30, color: C.white,
                                                      x: 1560, y: 312 });
             K.popIn(chip, 2.6, 70, 0.6);
             K.popIn(chipTxt, 2.7, 70, 0.6);
             K.glow(chip, 30, 0.5);
 
-            // supplier comparison bars
-            var cmpY = 860, widths = [520, 380, 610], names = ["Supplier A", "Supplier B", "Supplier C"];
+            // supplier comparison, in the right-hand column so it never overlaps the panel
+            var colX = 1400, colTop = 470;
+            label(c, "SUPPLIER COST", { x: colX, y: colTop - 60, name: "cmp label" });
+            var widths = [300, 220, 380], names = ["Supplier A", "Supplier B", "Supplier C"];
             var best = 1;
             for (i = 0; i < 3; i++) {
-                var by = cmpY + i * 60;
+                var by = colTop + i * 104;
                 var isBest = (i === best);
+                var nlab = K.text(c, names[i], { font: F.body, size: 24,
+                                                 color: isBest ? C.cyan : C.muted,
+                                                 x: colX, y: by, justify: "left" });
+                K.fadeIn(nlab, 4.4 + i * 0.16, 0.4);
+
                 var bar = K.rect(c, {
-                    w: widths[i], h: 34, r: 17,
+                    w: widths[i], h: 26, r: 13,
                     fill: isBest ? C.cyan : C.line,
-                    x: 400 + widths[i] / 2, y: by, name: "cmp" + i
+                    x: colX + widths[i] / 2, y: by + 32, name: "cmp" + i
                 });
+                // anchor on the left edge so the grow reads as a bar chart, not a zoom
                 bar.property("ADBE Transform Group").property("ADBE Anchor Point")
                    .setValue([-widths[i] / 2, 0]);
-                K.position(bar).setValue([400, by]);
+                K.position(bar).setValue([colX, by + 32]);
                 var bsc = K.scale(bar);
                 bsc.setValueAtTime(4.4 + i * 0.16, [0, 100]);
                 bsc.setValueAtTime(5.2 + i * 0.16, [100, 100]);
                 K.settle(bsc);
-                var nlab = K.text(c, names[i], { font: F.body, size: 24,
-                                                 color: isBest ? C.cyan : C.muted,
-                                                 x: 250, y: by + 8, justify: "left" });
-                K.fadeIn(nlab, 4.4 + i * 0.16, 0.4);
+
+                if (isBest) {
+                    var bestLab = K.text(c, "BEST", { font: F.bodyMd, size: 20, color: C.cyan,
+                                                      x: colX + widths[i] + 24, y: by + 40,
+                                                      justify: "left", tracking: 200 });
+                    K.fadeIn(bestLab, 5.6, 0.4);
+                }
             }
-            var bestLab = K.text(c, "BEST PRICE", { font: F.bodyMd, size: 22, color: C.cyan,
-                                                    x: 1060, y: cmpY + 68, justify: "left",
-                                                    tracking: 200 });
-            K.fadeIn(bestLab, 5.6, 0.4);
 
             var foot = K.text(c, "Every cost, every supplier, every change, logged.", {
                 font: F.body, size: 36, color: C.muted, x: CFG.w / 2, y: 1010
@@ -513,8 +540,7 @@
                 logo = c.layers.add(A.logoDark, c.duration);
                 logo.name = "LEWIX LOCKUP";
                 K.position(logo).setValue([CFG.w / 2, 640]);
-                var s = K.scale(logo).value;
-                K.scale(logo).setValue([s[0] * 0.42, s[1] * 0.42]);
+                K.fitW(logo, 560);   // source art is huge; scale from real pixel size
                 K.popIn(logo, 3.0, 88, 0.9);
                 K.blurIn(logo, 3.0, 20, 0.8);
             } else {
@@ -608,10 +634,10 @@
                   "  body: " + (F.body || "SUBSTITUTED") + "\n\n" +
                   (K.warnings.length ? ("Warnings (" + K.warnings.length + "):\n- " +
                                         K.warnings.join("\n- ")) : "No warnings.");
-        alert(msg);
+        say(msg);
 
     } catch (e) {
-        alert("build.jsx failed on line " + e.line + ":\n" + e.toString() +
+        say("build.jsx failed on line " + e.line + ":\n" + e.toString() +
               "\n\nWarnings so far:\n" + K.warnings.join("\n"));
         app.exitCode = 1;
     } finally {

@@ -249,10 +249,42 @@ $.global.K = (function () {
                         : (o.justify === "right") ? ParagraphJustification.RIGHT_JUSTIFY
                         : ParagraphJustification.CENTER_JUSTIFY;
         src.setValue(td);
+
+        // Horizontal alignment via the anchor point, measured from the real glyph bounds.
+        // ParagraphJustification alone does NOT make `position` mean "left edge" for point
+        // text, which silently renders left-aligned copy as right-aligned. Measured, not
+        // assumed. Vertical behaviour is left on the baseline, which is what the layouts use.
+        if (o.justify === "left" || o.justify === "right") {
+            try {
+                var r = lay.sourceRectAtTime(0, false);
+                var ax = (o.justify === "left") ? r.left : (r.left + r.width);
+                lay.property("ADBE Transform Group").property("ADBE Anchor Point")
+                   .setValue([ax, 0]);
+            } catch (e) { warn("sourceRectAtTime failed on text: " + String(str).substr(0, 20)); }
+        }
+
         lay.property("ADBE Transform Group").property("ADBE Position")
            .setValue([o.x !== undefined ? o.x : comp.width / 2,
                       o.y !== undefined ? o.y : comp.height / 2]);
         return lay;
+    };
+
+    /** Scale a footage layer so its rendered width is exactly targetPx. */
+    K.fitW = function (layer, targetPx) {
+        try {
+            var pct = targetPx / layer.source.width * 100;
+            K.scale(layer).setValue([pct, pct]);
+        } catch (e) { warn("fitW failed on " + layer.name + ": " + e); }
+        return layer;
+    };
+
+    /** Scale a footage layer so its rendered height is exactly targetPx. */
+    K.fitH = function (layer, targetPx) {
+        try {
+            var pct = targetPx / layer.source.height * 100;
+            K.scale(layer).setValue([pct, pct]);
+        } catch (e) { warn("fitH failed on " + layer.name + ": " + e); }
+        return layer;
     };
 
     // ---------------------------------------------------------------- easing
@@ -295,20 +327,31 @@ $.global.K = (function () {
         return layer.property("ADBE Transform Group").property("ADBE Scale");
     };
 
-    K.fadeIn = function (layer, t, dur) {
+    /**
+     * Fade in to the layer's CURRENT opacity, not a hardcoded 100.
+     * A layer deliberately sitting at 5% (background texture) must stay at 5%.
+     */
+    K.fadeIn = function (layer, t, dur, to) {
         var op = K.opacity(layer);
         dur = dur || 0.4;
+        if (to === undefined) { to = (op.numKeys === 0) ? op.value : op.valueAtTime(t + dur, false); }
         op.setValueAtTime(t, 0);
-        op.setValueAtTime(t + dur, 100);
+        op.setValueAtTime(t + dur, to);
         K.ease(op, op.numKeys - 1, 0, 60);
         K.ease(op, op.numKeys, 60, 0);
         return layer;
     };
 
+    /**
+     * Fade out FROM whatever the layer is already showing at time t.
+     * Writing a literal 100 here retroactively brightens every earlier frame,
+     * because the first keyframe defines the value for all time before it.
+     */
     K.fadeOut = function (layer, t, dur) {
         var op = K.opacity(layer);
         dur = dur || 0.4;
-        op.setValueAtTime(t, 100);
+        var from = (op.numKeys === 0) ? op.value : op.valueAtTime(t, false);
+        op.setValueAtTime(t, from);
         op.setValueAtTime(t + dur, 0);
         return layer;
     };
