@@ -1,0 +1,28 @@
+# bridge IPC scratch
+.tmp/
+
+# AE render output and auto-saves
+exports/renders/*
+!exports/renders/.gitkeep
+**/Adobe After Effects Auto-Save/
+*.aep.lock
+
+# large binaries — keep the workspace text-only
+assets/**
+!assets/.gitkeep
+projects/*.aep
+projects/*.aet
+*.mov
+*.mp4
+*.prores
+*.exr
+*.psd
+*.ai
+
+# probe output is machine-specific but small — keep the latest, ignore dated dumps
+exports/data/*-20*.json
+
+# os
+Thumbs.db
+desktop.ini
+.DS_Store
