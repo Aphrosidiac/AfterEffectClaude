@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Run an ExtendScript (.jsx) file in After Effects 2026.
 
@@ -27,14 +27,14 @@ $AE = "C:\Program Files\Adobe\Adobe After Effects 2026\Support Files"
 $launcher = Join-Path $AE "AfterFX.com"
 
 if (-not (Test-Path $launcher)) {
-    throw "AfterFX.com not found at $launcher — is After Effects 2026 installed?"
+    throw "AfterFX.com not found at $launcher - is After Effects 2026 installed?"
 }
 
 $running = @(Get-Process -Name AfterFX -ErrorAction SilentlyContinue)
 if ($running.Count -gt 0) {
-    Write-Host "After Effects is RUNNING (pid $($running[0].Id)) — the script will execute in that live instance." -ForegroundColor Yellow
+    Write-Host "After Effects is RUNNING (pid $($running[0].Id)) - the script will execute in that live instance." -ForegroundColor Yellow
 } else {
-    Write-Host "After Effects is not running — a new instance will be launched." -ForegroundColor Cyan
+    Write-Host "After Effects is not running - a new instance will be launched." -ForegroundColor Cyan
 }
 if ($CheckOnly) { return }
 
@@ -42,17 +42,17 @@ if ($Script) {
     if (-not (Test-Path $Script)) { throw "Script not found: $Script" }
     $full = (Resolve-Path $Script).Path
     Write-Host "Running $full"
-    $args = @("-r", $full)
+    $aeArgs = @("-r", $full)
 } elseif ($Code) {
     Write-Host "Running inline code"
-    $args = @("-s", $Code)
+    $aeArgs = @("-s", $Code)
 } else {
     throw "Pass -Script <path.jsx> or -Code '<extendscript>'"
 }
 
-$p = Start-Process -FilePath $launcher -ArgumentList $args -NoNewWindow -PassThru
+$p = Start-Process -FilePath $launcher -ArgumentList $aeArgs -NoNewWindow -PassThru
 if (-not $p.WaitForExit($TimeoutSeconds * 1000)) {
-    Write-Warning "Timed out after $TimeoutSeconds s — After Effects may be showing a dialog."
+    Write-Warning "Timed out after $TimeoutSeconds s - After Effects may be showing a dialog."
     return
 }
 Write-Host "Exit code: $($p.ExitCode)"

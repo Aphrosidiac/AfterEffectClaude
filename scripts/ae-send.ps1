@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Send a command to the AP-Bridge panel running inside After Effects and wait for the result.
 
@@ -35,7 +35,7 @@ $outbox = Join-Path $root "outbox"
 
 if ($Action -eq "status") {
     $s = Join-Path $root "status.json"
-    if (Test-Path $s) { Get-Content $s -Raw } else { "No status.json — bridge has never run." }
+    if (Test-Path $s) { Get-Content $s -Raw } else { "No status.json - bridge has never run." }
     return
 }
 
